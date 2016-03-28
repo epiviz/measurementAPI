@@ -34,8 +34,10 @@ field_title = {"field": "title", "type": "string", "description": "title of expe
 field_experiment = {"field": "experimentaccession", "type": "string", "description": "accession number of experiment", "label": "experimentaccession", "stats": {"rowCount": 0,"distinctValues": " " }, "filter": [filter_contains]}
 field_sex = {"field": "sex", "type": "string", "description": "sex of the host", "label": "sex", "stats": {"rowCount": 0, "distinctValues": ["male", "female"]}, "filter": [filter_equals]}
 field_country  = {"field": "country", "type": "string", "description": "country of the host", "label": "country", "stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_contains]}
-field_visitno = {"field": "visitno", "type": "int", "description": "visit number of sample", "label": "visitno", "stats": { "rowCount": 0, "distinctValues": " " }, "filter": [filter_contains]}
+field_visitno = {"field": "visitno", "type": "int", "description": "visit number of sample", "label": "visitno", "stats": { "rowCount": 0, "distinctValues": " " }, "filter": [filter_range]}
 field_bodysite = { "field": "bodysite", "type": "string", "description": "host body site of sample","label":"bodysite","stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_contains]}
+field_index = { "field": "index", "type": "int", "description": "index for hmp database", "label":"index","stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_range]}
+
 
 annotations = []
 annotations.append(field_id)
@@ -111,10 +113,14 @@ def post_measurements(dsName):
         for i in range(0, len(request.data['filter'])):
             if request.data['filter'][i]['filterOperator']=="contains":
                 whereClause.append(''' ''' + request.data['filter'][i]['filterField'] + ''' LIKE '%''' + request.data['filter'][i]['filterValue'] + '''%' ''')
-            elif request.data['filter'][i]['filterOperator']=='equals':
+            elif request.data['filter'][i]['filterOperator']=="equals":
                 whereClause.append(''' ''' + request.data['filter'][i]['filterField'] + '''=''' + request.data['filter'][i]['filterValue'] + ''' ''')
-            elif request.data['filter'][i]['filterOperator'] is 'range':
-                whereClause.append(''' LIKE %''' + request.data['filter'][i]['filterValue'] + '''% ''')
+            elif request.data['filter'][i]['filterOperator']=="range":
+                rangeStr = request.data['filter'][i]['filterValue']
+                rangeStrSplit = rangeStr.split(',')
+                lowerBound = rangeStrSplit[0]
+                upperBound = rangeStrSplit[1]
+                whereClause.append(''' ''' + request.data['filter'][i]['filterField'] + ''' BETWEEN ''' + lowerBound + ''' AND ''' + upperBound)
         if i > 0:
             whereClauseStr = ''' AND '''.join(whereClause)
         else:
