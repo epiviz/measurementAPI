@@ -95,6 +95,7 @@ def post_measurements(dsName):
     reqId = request.args.get('requestId')
     formatRes = request.args.get('format')
     cur = mysql.connection.cursor()
+    cur2 = mysql.connection.cursor()
     cur.execute('''SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME="col_data"''')
     rv = cur.fetchall()
     keys = (rv)
@@ -106,10 +107,12 @@ def post_measurements(dsName):
 
     pageSize = str(10)
     queryStr = '''SELECT * FROM col_data '''
+    countQueryStr = '''SELECT COUNT(*) FROM col_data '''
     whereClause = []
     whereClauseStr = ''
     if len(request.data['filter']) > 0:
         queryStr += ''' WHERE '''
+        countQueryStr += ''' WHERE '''
         for i in range(0, len(request.data['filter'])):
             if request.data['filter'][i]['filterOperator']=="contains":
                 whereClause.append(''' ''' + request.data['filter'][i]['filterField'] + ''' LIKE '%''' + request.data['filter'][i]['filterValue'] + '''%' ''')
@@ -126,19 +129,29 @@ def post_measurements(dsName):
         else:
             whereClauseStr = ''' '''.join(whereClause)
         print(whereClauseStr)
-        queryStr += whereClauseStr + ''' LIMIT ''' + str(request.data['pageSize']) + ''' '''  #+ ''',''' + request.data.pageoffset
+        queryStr += whereClauseStr + ''' LIMIT ''' + str(request.data['pageOffset']) + ''' , ''' + str(request.data['pageSize'])
+        countQueryStr += whereClauseStr #+ ''' LIMIT ''' + str(request.data['pageSize']) + ''' , ''' + str(request.data['pageOffset'])
         print(queryStr)
+        print(countQueryStr)
         cur.execute(queryStr)
+        rv = cur.fetchall()
+        cur2.execute(countQueryStr)
+        rv2 = cur2.fetchall()
     else:
-        queryStr += ''' LIMIT ''' + pageSize + ''' '''
+        queryStr += ''' LIMIT ''' + str(request.data['pageOffset']) + ''' , ''' + str(request.data['pageSize'])
+        #countQueryStr += ''' LIMIT ''' +  str(request.data['pageSize']) + ''' , ''' + str(request.data['pageOffset'])
         cur.execute(queryStr)
-    rv = cur.fetchall()
+        rv = cur.fetchall()
+        cur2.execute(countQueryStr)
+        rv2 = cur2.fetchall()
+    print(rv)
+    print(rv2)
     for j in range(0, len(rv)):
        measurements.append(copy.deepcopy(dictionary))
        for k in range(0, len(rv[j])):
           measurements[j][keys[k][0]] = rv[j][k]
 
-    res = jsonify({"dataMeasurements": measurements})
+    res = jsonify({"dataMeasurements": measurements, "totalCount": rv2[0], "pageOffset": str(request.data['pageOffset']), "requestId": reqId})
     res.headers['Access-Control-Allow-Origin'] = '*'
     res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
     return res
