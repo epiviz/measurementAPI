@@ -138,8 +138,6 @@ def post_measurements(dsName):
        for k in range(0, len(rv[j])):
           measurements[j][keys[k][0]] = rv[j][k]
 
-    annotations[0]['field'] = str(rv)
-
     res = jsonify({"dataMeasurements": measurements})
     res.headers['Access-Control-Allow-Origin'] = '*'
     res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
