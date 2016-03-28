@@ -114,7 +114,7 @@ def post_measurements(dsName):
             if request.data['filter'][i]['filterOperator']=="contains":
                 whereClause.append(''' ''' + request.data['filter'][i]['filterField'] + ''' LIKE '%''' + request.data['filter'][i]['filterValue'] + '''%' ''')
             elif request.data['filter'][i]['filterOperator']=="equals":
-                whereClause.append(''' ''' + request.data['filter'][i]['filterField'] + '''=''' + request.data['filter'][i]['filterValue'] + ''' ''')
+                whereClause.append(''' ''' + request.data['filter'][i]['filterField'] + '''="''' + request.data['filter'][i]['filterValue'] + '''" ''')
             elif request.data['filter'][i]['filterOperator']=="range":
                 rangeStr = request.data['filter'][i]['filterValue']
                 rangeStrSplit = rangeStr.split(',')
