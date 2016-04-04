@@ -8,11 +8,13 @@ from flask import request
 import json
 from flask.ext.mysqldb import MySQL
 import copy
+import credential
+
 
 app = Flask(__name__)
 mysql = MySQL()
-app.config['MYSQL_USER'] = ''
-app.config['MYSQL_PASSWORD'] = ''
+app.config['MYSQL_USER'] = credential.username
+app.config['MYSQL_PASSWORD'] = credential.password
 app.config['MYSQL_DB'] = 'metaviz_t'
 app.config['MYSQL_HOST'] = 'localhost'
 
@@ -73,10 +75,15 @@ def get_annotations(dsName):
     dataSource = dsName
     formatRes = request.args.get('format')
     cur = mysql.connection.cursor()
+    cur2 = mysql.connection.cursor()
+
     for i in range(0, len(annotations)):
         cur.execute('''SELECT COUNT(''' + annotations[i]['field'] + ''') FROM col_data''')
+        cur2.execute('''SELECT DISTINCT ''' + annotations[i]['field'] + ''' FROM col_data''')
         rv = cur.fetchall()
+        rv2 = cur2.fetchall()
         annotations[i]['stats']['rowCount'] = rv[0]
+        annotations[i]['stats']['distinctValues'] = rv2
     res = jsonify({"dataSource": dataSource, "dataAnnotations": annotations})
     res.headers['Access-Control-Allow-Origin'] = '*'
     res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
@@ -151,7 +158,7 @@ def post_measurements(dsName):
        for k in range(0, len(rv[j])):
           measurements[j][keys[k][0]] = rv[j][k]
 
-    res = jsonify({"dataMeasurements": measurements, "totalCount": rv2[0], "pageOffset": str(request.data['pageOffset']), "requestId": reqId})
+    res = jsonify({"dataMeasurements": measurements, "totalCount": rv2[0][0], "pageOffset": str(request.data['pageOffset']), "requestId": reqId})
     res.headers['Access-Control-Allow-Origin'] = '*'
     res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
     return res
