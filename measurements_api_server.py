@@ -79,11 +79,15 @@ def get_annotations(dsName):
 
     for i in range(0, len(annotations)):
         cur.execute('''SELECT COUNT(''' + annotations[i]['field'] + ''') FROM col_data''')
-        cur2.execute('''SELECT DISTINCT ''' + annotations[i]['field'] + ''' FROM col_data''')
+        cur2.execute('''SELECT DISTINCT ''' + annotations[i]['field'] + ''' FROM col_data WHERE ''' + annotations[i]['field'] + ''' IS NOT NULL''')
         rv = cur.fetchall()
         rv2 = cur2.fetchall()
         annotations[i]['stats']['rowCount'] = rv[0]
-        annotations[i]['stats']['distinctValues'] = rv2
+        annotations[i]['stats']['distinctValues'] = list(rv2[0])
+        for j in range(1, len(rv2)):
+           if j > 20:
+             break
+           annotations[i]['stats']['distinctValues'].append(rv2[j][0])
     res = jsonify({"dataSource": dataSource, "dataAnnotations": annotations})
     res.headers['Access-Control-Allow-Origin'] = '*'
     res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
