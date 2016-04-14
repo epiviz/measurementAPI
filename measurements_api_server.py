@@ -15,7 +15,7 @@ app = Flask(__name__)
 mysql = MySQL()
 app.config['MYSQL_USER'] = credential.username
 app.config['MYSQL_PASSWORD'] = credential.password
-app.config['MYSQL_DB'] = 'metaviz'
+app.config['MYSQL_DB'] = 'metaviz_t'
 app.config['MYSQL_HOST'] = 'localhost'
 
 mysql = MySQL(app)
@@ -61,7 +61,9 @@ annotations.append(field_platform)
 
 
 pre_processed_query1 = {"queryName" : "All Males", "filters": [{"filterField": "sex", "filterName": "equals", "filterValue": "male", "negate": "false"}]}
-pre_processed_query2 = {"queryName" : "All Males Stool", "filters": [{"filterField": "sex", "filterName": "equals", "filterValue": "male", "negate": "false"}, {"filterField": "bodysite", "filterName": "contains", "filterValue": "stool", "negate": "false"}]}
+pre_processed_query2 = {"queryName" : "All Males Saliva", "filters": [{"filterField": "sex", "filterName": "equals", "filterValue": "male", "negate": "false"}, {"filterField": "bodysite", "filterName": "contains", "filterValue": "saliva", "negate": "false"}]}
+pre_processed_query3 = {"queryName" : "All Saliva Visit Number 1 ", "filters": [{"filterField": "bodysite", "filterName": "contains", "filterValue": "saliva", "negate": "false"}, {"filterField": "visitno", "filterName": "range", "filterValue": "1,2", "negate": "false"}]}
+
 
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -183,7 +185,7 @@ def post_measurements(dsName):
 @app.route('/queries/<dsName>', methods=['GET'])
 def get_queries(dsName):
     dataSource = dsName
-    res = jsonify({"dataSource": dataSource, "queries": [pre_processed_query1, pre_processed_query2]})
+    res = jsonify({"dataSource": dataSource, "queries": [pre_processed_query1, pre_processed_query2, pre_processed_query3]})
     return res
 
 if __name__ == '__main__':
