@@ -15,7 +15,7 @@ app = Flask(__name__)
 mysql = MySQL()
 app.config['MYSQL_USER'] = credential.username
 app.config['MYSQL_PASSWORD'] = credential.password
-app.config['MYSQL_DB'] = 'metaviz_t'
+app.config['MYSQL_DB'] = 'metaviz'
 app.config['MYSQL_HOST'] = 'localhost'
 
 mysql = MySQL(app)
@@ -33,12 +33,16 @@ field_sample_id = {"field": "xsampleid", "type": "string", "description": "id of
 field_barcode = {"field": "barcodesequence", "type": "string", "description": "barcode of sample", "label": "barcodesequence", "stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_contains]}
 field_primer = {"field": "linkerprimersequence", "type": "string", "description": "primer sequence used", "label": "linkerprimersequence", "stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_contains]}
 field_title = {"field": "title", "type": "string", "description": "title of experiment", "label": "title", "stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_contains]}
-field_experiment = {"field": "experimentaccession", "type": "string", "description": "accession number of experiment", "label": "experimentaccession", "stats": {"rowCount": 0,"distinctValues": " " }, "filter": [filter_contains]}
+field_runcenter = {"field": "runcenter", "type": "string", "description": "run center of experiment", "label": "runcenter", "stats": {"rowCount": 0,"distinctValues": " " }, "filter": [filter_contains]}
 field_sex = {"field": "sex", "type": "string", "description": "sex of the host", "label": "sex", "stats": {"rowCount": 0, "distinctValues": ["male", "female"]}, "filter": [filter_equals]}
 field_country  = {"field": "country", "type": "string", "description": "country of the host", "label": "country", "stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_contains]}
 field_visitno = {"field": "visitno", "type": "int", "description": "visit number of sample", "label": "visitno", "stats": { "rowCount": 0, "distinctValues": " " }, "filter": [filter_range]}
 field_bodysite = { "field": "bodysite", "type": "string", "description": "host body site of sample","label":"bodysite","stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_contains]}
-field_index = { "field": "index", "type": "int", "description": "index for hmp database", "label":"index","stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_range]}
+field_collectday = { "field": "collectday", "type": "int", "description": "day that sample was collected", "label":"collectday","stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_range]}
+field_platform = { "field": "platform", "type": "string", "description": "platform that sequenced the sample", "label":"platform","stats": {"rowCount": 0, "distinctValues": " " }, "filter": [filter_range]}
+
+fieldsStr = "id, xsampleid, barcodesequence, linkerprimersequence, title, runcenter, sex, country, visitno, bodysite, collectday, platform"
+fieldsList = ["id", "xsampleid", "barcodesequence", "linkerprimersequence", "title", "runcenter", "sex", "country", "visitno", "bodysite", "collectday", "platform"]
 
 
 annotations = []
@@ -47,26 +51,39 @@ annotations.append(field_sample_id)
 annotations.append(field_barcode)
 annotations.append(field_primer)
 annotations.append(field_title)
-annotations.append(field_experiment)
+annotations.append(field_runcenter)
 annotations.append(field_sex)
 annotations.append(field_country)
 annotations.append(field_visitno)
 annotations.append(field_bodysite)
+annotations.append(field_collectday)
+annotations.append(field_platform)
+
+
+pre_processed_query1 = {"queryName" : "All Males", "filters": [{"filterField": "sex", "filterName": "equals", "filterValue": "male", "negate": "false"}]}
+pre_processed_query2 = {"queryName" : "All Males Stool", "filters": [{"filterField": "sex", "filterName": "equals", "filterValue": "male", "negate": "false"}, {"filterField": "bodysite", "filterName": "contains", "filterValue": "stool", "negate": "false"}]}
+
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    if request.method == 'OPTIONS':
+        response.headers['Access-Control-Allow-Methods'] = 'DELETE, GET, POST, PUT'
+        headers = request.headers.get('Access-Control-Request-Headers')
+        if headers:
+            response.headers['Access-Control-Allow-Headers'] = headers
+    return response
+
+app.after_request(add_cors_headers)
 
 # Function for displaying data providers available with data sources
 @app.route('/dataProviders', methods=['GET'])
 def get_providers():
     res = jsonify({"dataProviders": providers})
-    res.headers['Access-Control-Allow-Origin'] = '*'
-    res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
     return res
 
 # Function for displaying all data sources served by this provider
 @app.route('/dataSources', methods=['GET'])
 def get_sources():
     res = jsonify({"dataSources": [sources]})
-    res.headers['Access-Control-Allow-Origin'] = '*'
-    res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
     return res
 
 # Function for performing SQL query to retrieve database attributes
@@ -89,8 +106,6 @@ def get_annotations(dsName):
              break
            annotations[i]['stats']['distinctValues'].append(rv2[j][0])
     res = jsonify({"dataSource": dataSource, "dataAnnotations": annotations})
-    res.headers['Access-Control-Allow-Origin'] = '*'
-    res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
     return res
 
 # Function for performing SQL query to retrieve measurements with filters and pagination
@@ -109,16 +124,16 @@ def post_measurements(dsName):
     cur2 = mysql.connection.cursor()
     cur.execute('''SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME="col_data"''')
     rv = cur.fetchall()
-    keys = (rv)
+    keys = fieldsList
 
     measurements = []
     dictionary = {}
     for i in range(0, len(keys)):
-       dictionary[rv[i][0]] = " "
+       dictionary[keys[i]] = " "
 
     pageSize = str(10)
-    queryStr = '''SELECT * FROM col_data '''
-    countQueryStr = '''SELECT COUNT(*) FROM col_data '''
+    queryStr = '''SELECT ''' + fieldsStr + ''' FROM col_data '''
+    countQueryStr = '''SELECT COUNT(id) FROM col_data '''
     whereClause = []
     whereClauseStr = ''
     if len(request.data['filter']) > 0:
@@ -141,7 +156,7 @@ def post_measurements(dsName):
             whereClauseStr = ''' '''.join(whereClause)
         print(whereClauseStr)
         queryStr += whereClauseStr + ''' LIMIT ''' + str(request.data['pageOffset']) + ''' , ''' + str(request.data['pageSize'])
-        countQueryStr += whereClauseStr #+ ''' LIMIT ''' + str(request.data['pageSize']) + ''' , ''' + str(request.data['pageOffset'])
+        countQueryStr += whereClauseStr
         print(queryStr)
         print(countQueryStr)
         cur.execute(queryStr)
@@ -150,7 +165,6 @@ def post_measurements(dsName):
         rv2 = cur2.fetchall()
     else:
         queryStr += ''' LIMIT ''' + str(request.data['pageOffset']) + ''' , ''' + str(request.data['pageSize'])
-        #countQueryStr += ''' LIMIT ''' +  str(request.data['pageSize']) + ''' , ''' + str(request.data['pageOffset'])
         cur.execute(queryStr)
         rv = cur.fetchall()
         cur2.execute(countQueryStr)
@@ -160,13 +174,17 @@ def post_measurements(dsName):
     for j in range(0, len(rv)):
        measurements.append(copy.deepcopy(dictionary))
        for k in range(0, len(rv[j])):
-          measurements[j][keys[k][0]] = rv[j][k]
+          measurements[j][keys[k]] = rv[j][k]
 
     res = jsonify({"dataMeasurements": measurements, "totalCount": rv2[0][0], "pageOffset": str(request.data['pageOffset']), "requestId": reqId})
-    res.headers['Access-Control-Allow-Origin'] = '*'
-    res.headers['Access-Control-Allow-Headers'] = 'origin, content-type, accept'
     return res
 
+# Function for performing SQL query to retrieve database attributes
+@app.route('/queries/<dsName>', methods=['GET'])
+def get_queries(dsName):
+    dataSource = dsName
+    res = jsonify({"dataSource": dataSource, "queries": [pre_processed_query1, pre_processed_query2]})
+    return res
 
 if __name__ == '__main__':
     app.run(debug=True)
